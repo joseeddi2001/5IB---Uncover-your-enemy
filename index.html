@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>The Black List</title>
+<style>
+:root{
+  --red:#ff3131; --red2:#b30d16; --green:#36e37b; --amber:#e8a54c;
+  --ink:#071018; --panel:rgba(4,10,15,.90); --line:rgba(255,95,58,.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#05080d;color:white;font-family:Inter,Segoe UI,Arial,sans-serif}
+body{overflow-x:hidden}
+button,input,select{font:inherit}
+.screen{min-height:100vh;display:none;position:relative;background-size:cover;background-position:center;isolation:isolate}
+.screen.active{display:flex}
+.screen::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.22),rgba(0,0,0,.05) 50%,rgba(0,0,0,.2));z-index:-1}
+#home{background-image:url('assets/home-bg.png');align-items:flex-end;justify-content:center;padding:5vh 4vw 7vh}
+.home-hotspot{width:min(820px,56vw);height:clamp(76px,10vw,125px);margin-left:24vw;border:0;background:transparent;cursor:pointer;border-radius:18px;outline:none}
+.home-hotspot:focus-visible{box-shadow:0 0 0 4px rgba(255,255,255,.9),0 0 28px var(--red)}
+
+#code{background-image:url('assets/home-bg.png');align-items:center;justify-content:center;padding:32px}
+.overlay{position:absolute;inset:0;background:rgba(2,7,12,.54);backdrop-filter:blur(2px);z-index:-1}
+.panel{width:min(980px,94vw);background:linear-gradient(180deg,rgba(7,17,26,.96),rgba(3,7,11,.96));border:1px solid var(--line);box-shadow:0 0 0 2px rgba(255,51,51,.08),0 24px 80px rgba(0,0,0,.55);padding:38px;border-radius:18px;position:relative;overflow:hidden}
+.panel::after{content:"";position:absolute;inset:auto 0 0;height:3px;background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.kicker{font-size:.9rem;letter-spacing:.2em;color:var(--amber);font-weight:700;text-transform:uppercase}
+h1{margin:.35rem 0 .8rem;font-size:clamp(2rem,4vw,4rem);text-transform:uppercase;letter-spacing:.03em}
+.sub{color:#cbd5df;line-height:1.5;margin-bottom:28px}
+.code-row{display:flex;gap:16px;justify-content:center;margin:28px 0 30px}
+.code-input{width:92px;height:108px;text-align:center;text-transform:uppercase;font-size:3.2rem;font-weight:800;color:#fff;background:#0a1118;border:2px solid #53606c;border-radius:10px;outline:none;box-shadow:inset 0 0 20px rgba(255,255,255,.03)}
+.code-input:focus{border-color:var(--red);box-shadow:0 0 20px rgba(255,49,49,.25)}
+.actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{border:1px solid #7d2529;background:linear-gradient(#7e1117,#41090d);color:#fff;padding:14px 26px;border-radius:10px;font-weight:800;letter-spacing:.04em;cursor:pointer;min-width:190px}
+.btn:hover{filter:brightness(1.12)}
+.btn.secondary{background:#111820;border-color:#3e4a55;color:#d9e0e6}
+.btn.green{background:linear-gradient(#157941,#0b4b29);border-color:#2df07a}
+.note{font-size:.9rem;color:#9dadbb;text-align:center;margin-top:18px}
+
+#checking{background-image:url('assets/home-bg.png');align-items:center;justify-content:center;padding:32px}
+.check-panel{text-align:center}
+.scan-ring{width:140px;height:140px;border:2px solid rgba(255,61,61,.22);border-top-color:var(--red);border-right-color:var(--amber);border-radius:50%;margin:12px auto 26px;animation:spin 1s linear infinite;position:relative}
+.scan-ring::after{content:"";position:absolute;inset:16px;border:1px dashed rgba(255,255,255,.22);border-radius:50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress{height:18px;background:#111820;border:1px solid #46505a;border-radius:999px;overflow:hidden;margin:24px auto;width:min(680px,80vw)}
+.progress > div{height:100%;width:0;background:linear-gradient(90deg,#b70e17,var(--red),#ff8b3d);box-shadow:0 0 16px var(--red);animation:load 2.4s ease forwards}
+@keyframes load{0%{width:4%}45%{width:48%}80%{width:84%}100%{width:100%}}
+.check-code{display:flex;justify-content:center;gap:10px;margin-top:24px}
+.check-code span{display:grid;place-items:center;width:70px;height:82px;border:1px solid #5a6570;background:#0b1117;font-size:2.4rem;font-weight:800}
+
+#result{align-items:center;justify-content:center;padding:30px;background-image:url('assets/failure-bg.png')}
+.result-panel{text-align:center}
+.result-panel.success{border-color:rgba(54,227,123,.65)}
+.status{font-size:clamp(2.4rem,6vw,5.2rem);margin:4px 0 8px;font-weight:900;letter-spacing:.03em;text-transform:uppercase}
+.status.ok{color:var(--green);text-shadow:0 0 25px rgba(54,227,123,.35)}
+.status.bad{color:var(--red);text-shadow:0 0 25px rgba(255,49,49,.35)}
+.feedback-row{display:flex;gap:14px;justify-content:center;margin:28px 0 34px}
+.feedback{width:82px;height:96px;display:grid;place-items:center;font-size:2.8rem;font-weight:900;background:#0a1118;border:2px solid #58636d;border-radius:10px}
+.feedback.correct{border-color:var(--green);color:var(--green);box-shadow:0 0 20px rgba(54,227,123,.22)}
+.feedback.wrong{border-color:var(--red);color:var(--red);box-shadow:0 0 20px rgba(255,49,49,.25)}
+.feedback.empty{color:#7e8a95}
+
+#identify{background-image:url('assets/success-bg.png');align-items:center;justify-content:center;padding:30px}
+.identity-panel{text-align:center}
+.identity-panel select{width:min(520px,86vw);padding:16px 18px;border-radius:10px;background:#0b1219;color:white;border:1px solid #3fd983;font-size:1.1rem;margin:14px 0 22px}
+
+#target{background-image:url('assets/home-bg.png');align-items:center;justify-content:center;padding:28px}
+.target-layout{width:min(1080px,94vw);display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:34px;align-items:center;background:rgba(3,8,12,.90);border:1px solid rgba(255,57,57,.45);border-radius:18px;padding:28px 34px;box-shadow:0 26px 90px rgba(0,0,0,.6)}
+.target-layout img{width:100%;max-height:560px;object-fit:contain;filter:drop-shadow(0 18px 30px rgba(0,0,0,.55))}
+.target-name{font-size:clamp(3rem,7vw,6.5rem);font-weight:1000;text-transform:uppercase;color:#fff;margin:.2em 0;text-shadow:0 0 22px rgba(255,49,49,.3)}
+.target-sub{font-size:1.05rem;color:#c8d1da;line-height:1.5}
+.board{margin:24px 0;padding:18px 20px;border-left:4px solid var(--red);background:rgba(255,49,49,.08);font-size:1.15rem;line-height:1.5}
+.home-icon{width:34px;height:34px;vertical-align:middle;margin-right:8px;object-fit:contain}
+@media (max-width:800px){
+  #home{background-position:58% center}.home-hotspot{width:75vw;margin-left:10vw}
+  .panel{padding:24px}.code-input{width:58px;height:74px;font-size:2.2rem}.code-row{gap:8px}
+  .target-layout{grid-template-columns:1fr;text-align:center}.target-layout img{max-height:330px}
+}
+</style>
+</head>
+<body>
+<section id="home" class="screen active" aria-label="Home screen">
+  <button class="home-hotspot" id="homeEnter" aria-label="Enter secret code"></button>
+</section>
+
+<section id="code" class="screen" aria-label="Secret code entry">
+  <div class="overlay"></div>
+  <div class="panel">
+    <div class="kicker">Secure access terminal</div>
+    <h1>Enter secret code</h1>
+    <div class="sub">Enter the five letters obtained from your decryption key. Your code will only be evaluated after submission.</div>
+    <form id="codeForm" autocomplete="off">
+      <div class="code-row" id="codeInputs">
+        <input class="code-input" maxlength="1" inputmode="text" aria-label="Letter 1" />
+        <input class="code-input" maxlength="1" inputmode="text" aria-label="Letter 2" />
+        <input class="code-input" maxlength="1" inputmode="text" aria-label="Letter 3" />
+        <input class="code-input" maxlength="1" inputmode="text" aria-label="Letter 4" />
+        <input class="code-input" maxlength="1" inputmode="text" aria-label="Letter 5" />
+      </div>
+      <div class="actions">
+        <button class="btn" type="submit">Submit code</button>
+        <button class="btn secondary" type="button" id="codeHome">Back to Home</button>
+      </div>
+    </form>
+    <div class="note">No correctness feedback is shown until the verification sequence has finished.</div>
+  </div>
+</section>
+
+<section id="checking" class="screen" aria-label="Checking code">
+  <div class="overlay"></div>
+  <div class="panel check-panel">
+    <div class="kicker">Global intelligence network</div>
+    <h1>Checking secret code...</h1>
+    <div class="scan-ring" aria-hidden="true"></div>
+    <div class="check-code" id="checkingLetters"></div>
+    <div class="progress" aria-label="Verification progress"><div></div></div>
+    <div class="sub">Verifying encryption keys · Authenticating access · Cross-checking target database</div>
+  </div>
+</section>
+
+<section id="result" class="screen" aria-label="Code result">
+  <div class="overlay"></div>
+  <div class="panel result-panel" id="resultPanel">
+    <div class="kicker">Verification result</div>
+    <div class="status" id="resultStatus"></div>
+    <div class="sub" id="resultText"></div>
+    <div class="feedback-row" id="feedbackRow"></div>
+    <div class="actions" id="resultActions"></div>
+  </div>
+</section>
+
+<section id="identify" class="screen" aria-label="Agent identification">
+  <div class="overlay"></div>
+  <div class="panel identity-panel">
+    <div class="kicker">Access granted</div>
+    <h1>Identify yourself, Agent.</h1>
+    <div class="sub">You have submitted the correct code. Select your first name to open your assigned target dossier.</div>
+    <select id="agentSelect" aria-label="Select your first name">
+      <option value="">— Select your name —</option>
+    </select>
+    <div class="actions">
+      <button class="btn green" id="openDossier" type="button" disabled>Open target dossier</button>
+      <button class="btn secondary" id="identifyHome" type="button">Back to Home</button>
+    </div>
+  </div>
+</section>
+
+<section id="target" class="screen" aria-label="Target dossier">
+  <div class="overlay"></div>
+  <div class="target-layout">
+    <img src="assets/dossier.png" alt="Classified target dossier" />
+    <div>
+      <div class="kicker">Target identified</div>
+      <div class="target-name" id="targetName"></div>
+      <div class="target-sub">Your encrypted assignment has been confirmed. This operative is your secret enemy.</div>
+      <div class="board"><strong>Final instruction:</strong> write your target's first name on the physical class board so everyone can see who has been eliminated.</div>
+      <button class="btn" id="targetHome" type="button"><img class="home-icon" src="assets/back-home.png" alt="" />Back to Home</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const SECRET = 'QYVEX';
+  const pairs = {
+    'Eylül':'Rozenne','Rozenne':'Eylül',
+    'Ayush':'Cosima','Cosima':'Ayush',
+    'Gabriele':'Xinyu','Xinyu':'Gabriele',
+    'Shanaya':'Fredrik','Fredrik':'Shanaya',
+    'Drishti':'Lucas','Lucas':'Drishti',
+    'Philippe':'Shaanvi','Shaanvi':'Philippe',
+    'Chuhan':'Ella','Ella':'Chuhan',
+    'Natasha':'Noah','Noah':'Natasha',
+    'Dion':'Aishwarya','Aishwarya':'Dion',
+    'Gökmen':'Miranda','Miranda':'Gökmen',
+    'Alexander':'Georgina','Georgina':'Alexander',
+    'Fedir':'Sahana','Sahana':'Fedir'
+  };
+  const names = Object.keys(pairs).sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+  const screens = [...document.querySelectorAll('.screen')];
+  const inputs = [...document.querySelectorAll('.code-input')];
+  const form = document.getElementById('codeForm');
+  const checkingLetters = document.getElementById('checkingLetters');
+  const feedbackRow = document.getElementById('feedbackRow');
+  const resultStatus = document.getElementById('resultStatus');
+  const resultText = document.getElementById('resultText');
+  const resultActions = document.getElementById('resultActions');
+  const resultPanel = document.getElementById('resultPanel');
+  const agentSelect = document.getElementById('agentSelect');
+  const openDossier = document.getElementById('openDossier');
+  const targetName = document.getElementById('targetName');
+  let lastCode = '';
+
+  function show(id){ screens.forEach(s=>s.classList.toggle('active', s.id===id)); }
+  function goHome(){ inputs.forEach(i=>i.value=''); lastCode=''; agentSelect.value=''; openDossier.disabled=true; show('home'); }
+  function normalize(v){ return (v||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,1); }
+
+  inputs.forEach((input,idx)=>{
+    input.addEventListener('input',()=>{
+      input.value=normalize(input.value);
+      if(input.value && idx<inputs.length-1) inputs[idx+1].focus();
+    });
+    input.addEventListener('keydown',(e)=>{
+      if(e.key==='Backspace' && !input.value && idx>0) inputs[idx-1].focus();
+      if(e.key==='ArrowLeft' && idx>0) inputs[idx-1].focus();
+      if(e.key==='ArrowRight' && idx<inputs.length-1) inputs[idx+1].focus();
+    });
+    input.addEventListener('paste',(e)=>{
+      e.preventDefault();
+      const txt=(e.clipboardData.getData('text')||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,5);
+      [...txt].forEach((ch,j)=>{ if(inputs[j]) inputs[j].value=ch; });
+      inputs[Math.min(txt.length,4)].focus();
+    });
+  });
+
+  document.getElementById('homeEnter').addEventListener('click',()=>{show('code'); setTimeout(()=>inputs[0].focus(),50);});
+  document.getElementById('codeHome').addEventListener('click',goHome);
+  document.getElementById('identifyHome').addEventListener('click',goHome);
+  document.getElementById('targetHome').addEventListener('click',goHome);
+
+  form.addEventListener('submit',(e)=>{
+    e.preventDefault();
+    lastCode = inputs.map(i=>normalize(i.value)).join('');
+    if(lastCode.length!==5){
+      inputs.find(i=>!i.value)?.focus();
+      return;
+    }
+    checkingLetters.innerHTML='';
+    [...lastCode].forEach(ch=>{ const s=document.createElement('span'); s.textContent=ch; checkingLetters.appendChild(s); });
+    show('checking');
+    const progress = document.querySelector('.progress > div');
+    progress.style.animation='none'; void progress.offsetWidth; progress.style.animation='load 2.4s ease forwards';
+    setTimeout(showResult, 2550);
+  });
+
+  function showResult(){
+    const isCorrect = lastCode===SECRET;
+    document.getElementById('result').style.backgroundImage = `url('assets/${isCorrect?'success':'failure'}-bg.png')`;
+    resultPanel.classList.toggle('success',isCorrect);
+    resultStatus.className='status '+(isCorrect?'ok':'bad');
+    resultStatus.textContent=isCorrect?'ACCESS GRANTED':'ACCESS DENIED';
+    resultText.textContent=isCorrect?'Decryption successful. All five letters are correct.':'Incorrect secret code. Green letters are in the correct position; red letters are incorrect.';
+    feedbackRow.innerHTML='';
+    for(let i=0;i<5;i++){
+      const box=document.createElement('div'); box.className='feedback '+(lastCode[i]===SECRET[i]?'correct':'wrong'); box.textContent=lastCode[i]; feedbackRow.appendChild(box);
+    }
+    resultActions.innerHTML='';
+    if(isCorrect){
+      const next=document.createElement('button'); next.type='button'; next.className='btn green'; next.textContent='Identify yourself'; next.addEventListener('click',()=>show('identify')); resultActions.appendChild(next);
+    } else {
+      const retry=document.createElement('button'); retry.type='button'; retry.className='btn'; retry.textContent='Try again'; retry.addEventListener('click',()=>{show('code'); setTimeout(()=>inputs.find((i,idx)=>lastCode[idx]!==SECRET[idx])?.focus()||inputs[0].focus(),50);});
+    }
+    const home=document.createElement('button'); home.type='button'; home.className='btn secondary'; home.textContent='Back to Home'; home.addEventListener('click',goHome); resultActions.appendChild(home);
+    show('result');
+  }
+
+  names.forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;agentSelect.appendChild(o);});
+  agentSelect.addEventListener('change',()=>{openDossier.disabled=!agentSelect.value;});
+  openDossier.addEventListener('click',()=>{
+    const me=agentSelect.value; if(!me||!pairs[me]) return;
+    targetName.textContent=pairs[me]; show('target');
+  });
+})();
+</script>
+</body>
+</html>
